@@ -1,60 +1,116 @@
-🚀 Guia: Deploy de API no Azure App ServiceEste guia cobre a criação dos recursos necessários, a configuração e o deploy do seu código usando o método "Zip Deploy".Pré-requisitosAntes de começar, certifique-se de que você tem:Uma conta do Azure: Você precisa de uma assinatura ativa. (Uma conta gratuita está disponível).Azure CLI: Instalada em sua máquina. (Você pode instalar a partir deste link).Código da API: O código-fonte da sua API pronto e, de preferência, compilado (ex: a pasta dist, bin/Release, ou o build do seu projeto).Um arquivo ZIP: Um arquivo .zip contendo apenas os arquivos de build da sua API. (Não zipe a pasta-pai, entre na pasta de build e zipe o conteúdo).Passo 1: Login no AzureAbra seu terminal ou prompt de comando e faça o login na sua conta do Azure.Bashaz login
-Uma janela do navegador será aberta para você se autenticar. Após o login, selecione a assinatura que deseja usar, se tiver mais de uma.Bash# Opcional: Liste suas assinaturas
-az account list --output table
+🚀 Passo a Passo: Deploy de uma API na Azure
+📋 Pré-requisitos
 
-# Opcional: Defina a assinatura padrão
-az account set --subscription "NOME_OU_ID_DA_SUA_ASSINATURA"
-Passo 2: Criar um Grupo de Recursos (Resource Group)Um Grupo de Recursos é um contêiner lógico para agrupar e gerenciar seus recursos do Azure (como seu site, banco de dados, etc.).Bash# Variáveis para facilitar (altere os valores)
-LOCATION="brazilsouth"
-RESOURCE_GROUP="meu-grupo-recursos-api"
+Antes de começar, garanta que você tenha:
 
-az group create --name $RESOURCE_GROUP --location $LOCATION
-Passo 3: Criar um Plano do App ServiceO Plano do App Service define os recursos de computação (hardware, SO, preço) que sua API usará.F1 (Free) é ótimo para testes/dev.B1 (Basic) ou S1 (Standard) são recomendados para produção.Bash# Variável para o plano (altere o valor)
-APP_SERVICE_PLAN="meu-plano-api"
+Uma conta na Microsoft Azure
+
+O código da sua API (pode ser Java, Node.js, .NET, Python, etc.)
+
+O Azure CLI instalado localmente
+👉 Guia oficial
+
+(Opcional) Git instalado e configurado
+
+🧭 1. Faça login na sua conta Azure
+az login
+
+
+Após o comando, será aberta uma janela para login no navegador.
+Depois do login, o CLI exibirá as assinaturas disponíveis.
+
+🗂️ 2. Crie um Resource Group
+
+Um Resource Group agrupa todos os recursos do seu projeto.
+
+az group create --name meu-grupo-api --location eastus
+
+
+💡 Substitua meu-grupo-api pelo nome desejado e eastus pela região mais próxima.
+
+☁️ 3. Crie um App Service Plan
+
+O App Service Plan define a capacidade de computação e o preço.
 
 az appservice plan create \
-    --name $APP_SERVICE_PLAN \
-    --resource-group $RESOURCE_GROUP \
-    --location $LOCATION \
-    --sku F1 \
-    --is-linux
-Nota: O --is-linux cria um plano baseado em Linux, que é geralmente mais barato e preferido para a maioria das runtimes modernas (Node, Python, .NET Core, Java). Se você precisa de .NET Framework legado, remova este parâmetro.Passo 4: Criar o App Service (Web App)Este é o recurso que de fato hospedará sua API. É aqui que você define o "runtime" (a pilha de tecnologia).Bash# Variável para o nome da API (TEM QUE SER GLOBALMENTE ÚNICO)
-API_NAME="minha-api-unica-20251029"
+  --name meu-plano-api \
+  --resource-group meu-grupo-api \
+  --sku B1
 
-# Veja a seção "Runtimes Comuns" abaixo para escolher o valor correto
-RUNTIME="DOTNET|6.0" 
 
+O plano B1 é uma opção básica com custo baixo (ideal para testes).
+
+⚙️ 4. Crie o App Service (sua API)
 az webapp create \
-    --name $API_NAME \
-    --resource-group $RESOURCE_GROUP \
-    --plan $APP_SERVICE_PLAN \
-    --runtime $RUNTIME
-Runtimes Comuns (Exemplos para --runtime)TecnologiaValor do Runtime.NET 8`DOTNET.NET 6`DOTNETNode.js 18 LTS`NODENode.js 16 LTS`NODEPython 3.11`PYTHONJava 17 (Tomcat)`JAVAPara ver todos os runtimes disponíveis, use: az webapp list-runtimes --linux ou az webapp list-runtimes --windowsPasso 5: Configurar Variáveis de AmbienteQuase toda API precisa de "secrets", como strings de conexão de banco de dados ou chaves de API. Nunca coloque isso no seu código. Configure-os no Azure:Bash# Exemplo para uma string de conexão de banco de dados
-az webapp config appsettings set \
-    --name $API_NAME \
-    --resource-group $RESOURCE_GROUP \
-    --settings "ConnectionStrings__DefaultConnection=SUA_CONNECTION_STRING_AQUI"
+  --resource-group meu-grupo-api \
+  --plan meu-plano-api \
+  --name minha-api-azure \
+  --runtime "JAVA:8-java11" 
 
-# Exemplo para uma chave de API
-az webapp config appsettings set \
-    --name $API_NAME \
-    --resource-group $RESOURCE_GROUP \
-    --settings "MinhaChaveSecreta=valor-12345" "ASPNETCORE_ENVIRONMENT=Production"
-Passo 6: Fazer o Deploy da API (Zip Deploy)Este é o comando que envia seu código (o arquivo .zip dos pré-requisitos) para o App Service.Bash# Navegue até onde está seu arquivo .zip
-# Ex: cd minha-api/build/
 
-# Defina o caminho para o seu arquivo zip
-ARQUIVO_ZIP_PATH="./meu-build-da-api.zip"
+🔄 Substitua o --runtime conforme sua linguagem:
+
+Node.js → "NODE:18-lts"
+
+.NET → "DOTNETCORE:6.0"
+
+Python → "PYTHON:3.9"
+
+Java → "JAVA:8-java11" (ou outro compatível)
+
+🧱 5. Configure variáveis de ambiente (opcional)
+
+Caso sua API precise de variáveis de ambiente (como banco de dados):
+
+az webapp config appsettings set \
+  --resource-group meu-grupo-api \
+  --name minha-api-azure \
+  --settings DATABASE_URL="jdbc:mysql://..." API_KEY="minhachave"
+
+🚢 6. Faça o deploy da API
+
+Existem três formas principais de deploy:
+
+🔹 Opção 1 — Via ZIP (direto do código)
+
+Crie um arquivo .zip com seu código e rode:
 
 az webapp deployment source config-zip \
-    --resource-group $RESOURCE_GROUP \
-    --name $API_NAME \
-    --src $ARQUIVO_ZIP_PATH
-O Azure irá carregar o zip, descompactá-lo no servidor e reiniciar sua aplicação com o novo código.Passo 7: Testar sua APISeu deploy está concluído! O Azure fornece um URL público para sua API. Você pode encontrá-lo no portal ou com o comando abaixo:Bash# Pega o hostname padrão
-HOSTNAME=$(az webapp show --name $API_NAME --resource-group $RESOURCE_GROUP --query "defaultHostName" --output tsv)
+  --resource-group meu-grupo-api \
+  --name minha-api-azure \
+  --src ./minha-api.zip
 
-echo "Sua API está disponível em: https://$HOSTNAME/"
+🔹 Opção 2 — Via GitHub Actions (CI/CD)
 
-# Exemplo de teste com curl (se sua API tiver um endpoint /api/health)
-curl https://$HOSTNAME/api/health
-Você pode agora usar o Postman, Insomnia ou qualquer cliente HTTP para testar seus endpoints.
+Configure integração contínua:
+
+az webapp deployment source config \
+  --name minha-api-azure \
+  --resource-group meu-grupo-api \
+  --repo-url https://github.com/usuario/meu-repo-api \
+  --branch main \
+  --manual-integration
+
+
+💡 Assim, cada push no GitHub faz o deploy automático.
+
+🔹 Opção 3 — Via Docker (Container)
+
+Se sua API está containerizada:
+
+az webapp create \
+  --resource-group meu-grupo-api \
+  --plan meu-plano-api \
+  --name minha-api-azure \
+  --deployment-container-image-name usuario/minhaapi:latest
+
+🔍 7. Teste o deploy
+
+Acesse no navegador:
+
+https://minha-api-azure.azurewebsites.net
+
+
+Você também pode checar logs:
+
+az webapp log tail --name minha-api-azure --resource-group meu-grupo-api
